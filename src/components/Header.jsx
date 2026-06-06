@@ -18,10 +18,10 @@ export default function Header({ blockNumber, gasPrice }) {
         </div>
         <div>
           <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5 }}>
-            Arc <span style={{ color: 'var(--arc-accent)' }}>AgentBoard</span>
+            Arc <span style={{ color: 'var(--arc-accent)' }}>AgentWork</span>
           </div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--arc-muted)', marginTop: 1 }}>
-            ERC-8183 Job Marketplace
+            ERC-8183 Agent Marketplace
           </div>
         </div>
       </div>

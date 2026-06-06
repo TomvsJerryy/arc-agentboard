@@ -7,6 +7,7 @@ import PostJob from './components/PostJob'
 import AgentsPanel from './components/AgentsPanel'
 import LiveFeed from './components/LiveFeed'
 import Toast from './components/Toast'
+import WalletBar from './components/WalletBar'
 import { INITIAL_JOBS, randomHash, timeAgo } from './lib/data'
 import { getLatestBlock } from './lib/arc'
 
@@ -24,6 +25,7 @@ export default function App() {
   const [toast, setToast] = useState('')
   const [appFeed, setAppFeed] = useState([])
   const [blockNumber, setBlockNumber] = useState(null)
+  const [wallet, setWallet] = useState({ address: null, isOnArc: false })
 
   useEffect(() => {
     getLatestBlock().then(n => { if (n) setBlockNumber(n) })
@@ -72,6 +74,7 @@ export default function App() {
   return (
     <div style={{ position: 'relative', zIndex: 1, maxWidth: 900, margin: '0 auto', padding: '0 20px 80px' }}>
       <Header blockNumber={blockNumber} />
+      <WalletBar onWalletChange={setWallet} />
       <StatsBar jobs={jobs} />
 
       {/* Tabs */}
@@ -117,7 +120,7 @@ export default function App() {
       {/* Panels */}
       {tab === 'jobs' && (
         selectedJob
-          ? <JobDetail job={selectedJob} onBack={handleBack} onUpdate={handleUpdateJob} />
+          ? <JobDetail job={selectedJob} onBack={handleBack} onUpdate={handleUpdateJob} wallet={wallet} />
           : <JobList jobs={jobs} onSelect={handleSelectJob} />
       )}
       {tab === 'post' && <PostJob onPost={handlePost} />}

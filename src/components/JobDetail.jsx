@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { STATUS_META, STATUS_IDX, LC_STEPS, AGENTS, randomHash, randomMs } from '../lib/data'
 import { BLOCK_EXPLORER } from '../lib/arc'
 import { StatusBadge } from './JobList'
+import { sendNativeDemo, waitForReceipt } from '../lib/transactions'
 
 const TX_ICONS = {
   createJob: '📝', setBudget: '💱', approve: '✅', fund: '🔒',
@@ -54,17 +55,27 @@ function TxRow({ tx }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10,
       padding: '8px 12px', background: 'var(--arc-surface2)',
-      border: '1px solid var(--arc-border)', borderRadius: 8,
+      border: `1px solid ${tx.real ? 'rgba(0,229,160,0.3)' : 'var(--arc-border)'}`,
+      borderRadius: 8,
     }}>
       <div style={{
         width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-        background: 'rgba(0,229,160,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 14,
+        background: tx.real ? 'rgba(0,229,160,0.15)' : 'rgba(0,229,160,0.1)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
       }}>
         {TX_ICONS[tx.name] || '⚡'}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 600 }}>{tx.name}()</div>
+        <div style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+          {tx.name}()
+          {tx.real && (
+            <span style={{
+              fontFamily: 'var(--font-mono)', fontSize: 9, padding: '2px 6px', borderRadius: 4,
+              background: 'rgba(0,229,160,0.15)', border: '1px solid rgba(0,229,160,0.4)',
+              color: 'var(--arc-accent)',
+            }}>REAL TX</span>
+          )}
+        </div>
         <a
           href={`${BLOCK_EXPLORER}/tx/${tx.hash}`}
           target="_blank"
@@ -114,14 +125,45 @@ const PROC_MSGS = [
   'Confirmed ✓',
 ]
 
-export default function JobDetail({ job, onBack, onUpdate }) {
+export default function JobDetail({ job, onBack, onUpdate, wallet }) {
   const [processing, setProcessing] = useState(false)
   const [procMsg, setProcMsg] = useState('')
 
-  const simulate = (newStatus, txName, assignAgent) => {
+  const simulate = async (newStatus, txName, assignAgent) => {
     setProcessing(true)
     let i = 0
     setProcMsg(PROC_MSGS[0])
+
+    const useRealTx = wallet?.address && wallet?.isOnArc
+
+    if (useRealTx) {
+      // Send a real transaction on Arc Testnet!
+      setProcMsg('Confirm transaction in MetaMask...')
+      try {
+        const txHash = await sendNativeDemo(wallet.address)
+        setProcMsg('Waiting for Arc finality...')
+        const { finalityMs } = await waitForReceipt(txHash)
+        const ms = finalityMs || randomMs()
+        setProcessing(false)
+        const updated = {
+          ...job,
+          status: newStatus,
+          txs: [...job.txs, { name: txName, hash: txHash, ms, real: true }],
+          agent: assignAgent || job.agent,
+          agentId: assignAgent
+            ? (AGENTS.find(a => a.name === assignAgent)?.id || job.agentId)
+            : job.agentId,
+        }
+        onUpdate(updated, ms)
+      } catch (err) {
+        setProcessing(false)
+        setProcMsg('')
+        alert(err.message)
+      }
+      return
+    }
+
+    // Simulate mode (no wallet)
     const iv = setInterval(() => {
       i++
       if (i < PROC_MSGS.length) setProcMsg(PROC_MSGS[i])
